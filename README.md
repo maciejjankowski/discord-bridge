@@ -71,9 +71,9 @@ python3 discord_bridge.py users
 
 ## Claude Code Integration
 
-### As a hook (SessionStart)
+### Automatic (recommended)
 
-Add to `.claude/settings.json`:
+Ready-made hooks are in the `hooks/` folder. Add to `.claude/settings.json`:
 
 ```json
 {
@@ -81,12 +81,24 @@ Add to `.claude/settings.json`:
     "SessionStart": [
       {
         "type": "command",
-        "command": "python3 /path/to/discord_bridge.py interactions --since 60"
+        "command": "/path/to/discord-bridge/hooks/discord_check_hook.sh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "/path/to/discord-bridge/hooks/discord_poll_hook.sh"
       }
     ]
   }
 }
 ```
+
+This gives you:
+- **SessionStart**: checks for new messages when Claude Code starts
+- **PostToolUse**: polls for new messages every ~15 tool calls while working
+
+Make hooks executable: `chmod +x hooks/*.sh`
 
 ### In CLAUDE.md
 
