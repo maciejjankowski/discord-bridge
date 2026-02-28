@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install macOS launchd watchdog - checks Discord every 60s
+# Install macOS launchd watchdog - checks Discord every 30s
 # When new message arrives:
 #   1. macOS notification with sound
 #   2. Injects text into iTerm2 Claude Code session automatically
@@ -35,7 +35,7 @@ cat > "$PLIST_PATH" << EOF
         <string>$WATCHDOG</string>
     </array>
     <key>StartInterval</key>
-    <integer>60</integer>
+    <integer>30</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
@@ -55,7 +55,7 @@ EOF
 
 launchctl load "$PLIST_PATH"
 
-echo "Installed! Discord watchdog runs every 60s."
+echo "Installed! Discord watchdog runs every 30s."
 echo ""
 echo "What happens when someone writes on Discord:"
 echo "  1. macOS notification with sound"
