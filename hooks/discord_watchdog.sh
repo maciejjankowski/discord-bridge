@@ -1,5 +1,5 @@
 #!/bin/bash
-# Discord Watchdog - polls Discord every 60s via launchd
+# Discord Watchdog - polls Discord every 30s via launchd
 # When new human message arrives:
 #   1. Saves to /tmp/discord_new_message.flag
 #   2. Sends macOS notification with sound
@@ -68,8 +68,11 @@ if not messages:
 # Update last_seen_id to the newest message
 STATE.write_text(messages[0]["id"])
 
-# Filter to human messages only
-human_msgs = [m for m in reversed(messages) if not m["author"].get("bot", False)]
+# Filter to human messages only (use BOT_ID if set, otherwise check bot flag)
+if BOT_ID:
+    human_msgs = [m for m in reversed(messages) if m["author"]["id"] != BOT_ID]
+else:
+    human_msgs = [m for m in reversed(messages) if not m["author"].get("bot", False)]
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 

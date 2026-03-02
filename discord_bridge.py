@@ -180,8 +180,32 @@ def read_unread():
     return messages
 
 
+def chunk_message(content: str, limit: int = 1900) -> list:
+    """Split a message into chunks that fit Discord's 2000 char limit.
+    Splits on newlines when possible, falls back to hard split."""
+    if len(content) <= limit:
+        return [content]
+
+    chunks = []
+    while content:
+        if len(content) <= limit:
+            chunks.append(content)
+            break
+        # Try to split on last newline before limit
+        split_at = content.rfind('\n', 0, limit)
+        if split_at == -1 or split_at < limit // 2:
+            # No good newline, split on last space
+            split_at = content.rfind(' ', 0, limit)
+        if split_at == -1:
+            split_at = limit
+        chunks.append(content[:split_at])
+        content = content[split_at:].lstrip('\n')
+    return chunks
+
+
 def send_message(content: str, force: bool = False) -> dict:
-    """Send a message to Discord with rate limiting."""
+    """Send a message to Discord with rate limiting.
+    Auto-chunks messages over 2000 chars."""
     if LAST_SEND_FILE.exists() and not force:
         last_send = float(LAST_SEND_FILE.read_text().strip())
         elapsed = time.time() - last_send
@@ -192,19 +216,28 @@ def send_message(content: str, force: bool = False) -> dict:
             print(f"   (Use --force to bypass)")
             return {"error": "rate_limited", "wait_seconds": remaining}
 
-    response = requests.post(
-        f"https://discord.com/api/v10/channels/{CHANNEL_ID}/messages",
-        headers=HEADERS,
-        json={"content": content}
-    )
+    chunks = chunk_message(content)
+    last_response = None
 
-    if response.status_code == 200:
-        LAST_SEND_FILE.write_text(str(time.time()))
-        print(f"Message sent")
-        return response.json()
-    else:
-        print(f"Failed: {response.status_code}")
-        return {"error": response.text}
+    for i, chunk in enumerate(chunks):
+        response = requests.post(
+            f"https://discord.com/api/v10/channels/{CHANNEL_ID}/messages",
+            headers=HEADERS,
+            json={"content": chunk}
+        )
+
+        if response.status_code == 200:
+            last_response = response.json()
+            if i < len(chunks) - 1:
+                time.sleep(0.5)  # Avoid rate limit between chunks
+        else:
+            print(f"Failed on chunk {i+1}/{len(chunks)}: {response.status_code}")
+            return {"error": response.text}
+
+    LAST_SEND_FILE.write_text(str(time.time()))
+    sent_msg = f"Message sent" if len(chunks) == 1 else f"Message sent ({len(chunks)} parts)"
+    print(sent_msg)
+    return last_response
 
 
 def watch(interval: int = 30):
